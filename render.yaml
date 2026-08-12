@@ -33,9 +33,9 @@ services:
       - key: CASUYA_ORIGIN
         value: https://casuya-virtual-lab-platform.vercel.app
       - key: API_KEY
-        generateValue: true
+        value: e5b6150048a682e3b9148389341b3afb69e2a67f0dd1becc7c943472a01d328f
       - key: ADMIN_PASSWORD
-        generateValue: true
+        value: lab-admin-2026
       - key: PGSSLMODE
         value: require
 
