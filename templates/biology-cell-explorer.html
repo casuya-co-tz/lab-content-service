@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cell Biology Lab</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    h1 { font-size: 20px; margin-bottom: 16px; color: #34d399; }
+    .container { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 1000px; }
+    .cell-view { flex: 1; min-width: 350px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; display: flex; align-items: center; justify-content: center; min-height: 400px; }
+    .cell-view svg { width: 100%; max-width: 400px; }
+    .info-panel { flex: 1; min-width: 280px; }
+    .organelle-btn { display: block; width: 100%; padding: 10px 14px; background: #1e293b; border: 1px solid #334155; border-radius: 4px; color: #e2e8f0; text-align: left; cursor: pointer; margin-bottom: 6px; font-size: 13px; transition: all 0.15s; }
+    .organelle-btn:hover { border-color: #34d399; background: rgba(52,211,153,0.1); }
+    .organelle-btn.active { border-color: #34d399; background: rgba(52,211,153,0.15); }
+    .detail-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin-top: 12px; }
+    .detail-card h3 { color: #34d399; margin-bottom: 8px; }
+    .detail-card p { font-size: 13px; line-height: 1.6; color: #94a3b8; }
+    .score-area { margin-top: 12px; text-align: center; }
+    .score-area button { padding: 10px 20px; background: #34d399; color: #0f172a; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; }
+    .progress { width: 100%; height: 6px; background: #334155; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+    .progress .bar { height: 100%; background: #34d399; transition: width 0.3s; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <h1>Animal Cell Explorer</h1>
+  <div class="container">
+    <div class="cell-view">
+      <svg viewBox="0 0 400 400">
+        <ellipse cx="200" cy="200" rx="180" ry="150" fill="none" stroke="#475569" stroke-width="3"/>
+        <ellipse cx="200" cy="200" rx="175" ry="145" fill="rgba(52,211,153,0.05)"/>
+        <ellipse cx="200" cy="195" rx="50" ry="45" fill="rgba(139,92,246,0.3)" stroke="#8b5cf6" stroke-width="2" onclick="showOrganelle('nucleus')" style="cursor:pointer"/>
+        <circle cx="200" cy="195" r="15" fill="rgba(139,92,246,0.5)" stroke="#a78bfa" stroke-width="1" onclick="showOrganelle('nucleolus')" style="cursor:pointer"/>
+        <ellipse cx="120" cy="140" rx="25" ry="12" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5" onclick="showOrganelle('mitochondria')" style="cursor:pointer"/>
+        <ellipse cx="300" cy="170" rx="25" ry="12" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5" onclick="showOrganelle('mitochondria')" style="cursor:pointer"/>
+        <path d="M260,120 Q280,100 300,120 Q280,140 260,120Z" fill="rgba(251,191,36,0.2)" stroke="#fbbf24" stroke-width="1.5" onclick="showOrganelle('golgi')" style="cursor:pointer"/>
+        <rect x="140" y="260" width="60" height="30" rx="4" fill="rgba(96,165,250,0.2)" stroke="#60a5fa" stroke-width="1.5" onclick="showOrganelle('er')" style="cursor:pointer"/>
+        <rect x="230" y="250" width="45" height="25" rx="4" fill="rgba(96,165,250,0.2)" stroke="#60a5fa" stroke-width="1.5" onclick="showOrganelle('er')" style="cursor:pointer"/>
+        <circle cx="100" cy="280" r="8" fill="rgba(244,114,182,0.3)" stroke="#f472b6" stroke-width="1" onclick="showOrganelle('lysosome')" style="cursor:pointer"/>
+        <circle cx="310" cy="290" r="8" fill="rgba(244,114,182,0.3)" stroke="#f472b6" stroke-width="1" onclick="showOrganelle('lysosome')" style="cursor:pointer"/>
+        <circle cx="320" cy="130" r="6" fill="rgba(52,211,153,0.3)" stroke="#34d399" stroke-width="1" onclick="showOrganelle('ribosome')" style="cursor:pointer"/>
+        <circle cx="80" cy="200" r="6" fill="rgba(52,211,153,0.3)" stroke="#34d399" stroke-width="1" onclick="showOrganelle('ribosome')" style="cursor:pointer"/>
+        <circle cx="150" cy="100" r="6" fill="rgba(52,211,153,0.3)" stroke="#34d399" stroke-width="1" onclick="showOrganelle('ribosome')" style="cursor:pointer"/>
+      </svg>
+    </div>
+    <div class="info-panel">
+      <button class="organelle-btn" onclick="showOrganelle('nucleus')">Nucleus</button>
+      <button class="organelle-btn" onclick="showOrganelle('mitochondria')">Mitochondria</button>
+      <button class="organelle-btn" onclick="showOrganelle('golgi')">Golgi Apparatus</button>
+      <button class="organelle-btn" onclick="showOrganelle('er')">Endoplasmic Reticulum</button>
+      <button class="organelle-btn" onclick="showOrganelle('lysosome')">Lysosome</button>
+      <button class="organelle-btn" onclick="showOrganelle('ribosome')">Ribosome</button>
+      <div class="detail-card" id="detail-card">
+        <h3>Click an organelle to learn about it</h3>
+        <p>Each organelle has a specific function that keeps the cell alive and working.</p>
+      </div>
+      <div class="progress"><div class="bar" id="progress-bar" style="width:0%"></div></div>
+      <div class="score-area">
+        <p style="font-size:12px;color:#94a3b8;margin-bottom:8px">Discovered: <span id="discovered">0</span>/6 organelles</p>
+        <button onclick="submitScore()">Submit Score</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    var organelles = {
+      nucleus: { title: "Nucleus", desc: "The control center of the cell. Contains DNA and coordinates gene expression, cell growth, and reproduction." },
+      nucleolus: { title: "Nucleolus", desc: "Found inside the nucleus, it produces ribosomal RNA and assembles ribosome subunits." },
+      mitochondria: { title: "Mitochondria", desc: "The powerhouse of the cell. Generates ATP through cellular aerobic respiration. Has its own DNA." },
+      golgi: { title: "Golgi Apparatus", desc: "Modifies, sorts, and packages proteins and lipids for secretion or delivery to other organelles." },
+      er: { title: "Endoplasmic Reticulum", desc: "Rough ER processes proteins. Smooth ER synthesizes lipids and detoxifies drugs." },
+      lysosome: { title: "Lysosome", desc: "Contains digestive enzymes that break down waste, cellular debris, and foreign materials." },
+      ribosome: { title: "Ribosome", desc: "Small structures that translate mRNA into proteins. Essential for protein synthesis." }
+    };
+    var visited = {};
+    function showOrganelle(name) {
+      var o = organelles[name];
+      visited[name] = true;
+      document.getElementById("detail-card").innerHTML = "<h3>" + o.title + "</h3><p>" + o.desc + "</p>";
+      var count = Object.keys(visited).length;
+      document.getElementById("discovered").textContent = count;
+      document.getElementById("progress-bar").style.width = (count / 6 * 100) + "%";
+    }
+    function submitScore() {
+      var count = Object.keys(visited).length;
+      var score = Math.round(count / 6 * 100);
+      window.parent.postMessage({ type: "lab-progress", status: count >= 6 ? "completed" : "in_progress", score: score, completion_data: { discovered: Object.keys(visited) } }, "*");
+      alert("Score: " + score + "%");
+    }
+  </script>
+</body>
+</html>

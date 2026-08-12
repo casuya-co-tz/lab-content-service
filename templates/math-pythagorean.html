@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pythagorean Theorem Lab</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    h1 { font-size: 20px; margin-bottom: 8px; color: #fbbf24; }
+    .subtitle { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
+    .container { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 900px; }
+    .visual { flex: 1; min-width: 300px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; text-align: center; }
+    .visual svg { width: 100%; max-width: 350px; }
+    .controls { flex: 1; min-width: 260px; }
+    .input-group { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+    .input-group label { display: block; font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .input-group .value { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+    .input-group input[type=range] { width: 100%; }
+    .result { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin-bottom: 12px; }
+    .result h3 { font-size: 14px; color: #fbbf24; margin-bottom: 12px; }
+    .formula { font-size: 18px; text-align: center; padding: 12px; background: #0f172a; border-radius: 4px; margin-bottom: 8px; font-family: monospace; }
+    .answer { font-size: 28px; font-weight: 700; text-align: center; color: #34d399; }
+    .verify { text-align: center; margin-top: 8px; font-size: 13px; }
+    .verify.pass { color: #34d399; }
+    button { width: 100%; padding: 10px; background: #f59e0b; color: #0f172a; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; }
+    button:hover { background: #d97706; }
+  </style>
+</head>
+<body>
+  <h1>Pythagorean Theorem</h1>
+  <p class="subtitle">a2 + b2 = c2</p>
+  <div class="container">
+    <div class="visual">
+      <svg viewBox="0 0 350 300" id="triangle-svg"></svg>
+    </div>
+    <div class="controls">
+      <div class="input-group">
+        <label>Side a</label>
+        <div class="value" id="a-display" style="color:#f87171">3</div>
+        <input type="range" id="side-a" min="1" max="20" value="3" oninput="update()">
+      </div>
+      <div class="input-group">
+        <label>Side b</label>
+        <div class="value" id="b-display" style="color:#60a5fa">4</div>
+        <input type="range" id="side-b" min="1" max="20" value="4" oninput="update()">
+      </div>
+      <div class="result">
+        <h3>Result</h3>
+        <div class="formula" id="formula">32 + 42 = c2</div>
+        <div class="answer" id="answer">c = 5.00</div>
+        <div class="verify pass" id="verify">Verified: 9 + 16 = 25</div>
+      </div>
+      <button onclick="randomize()">Random Values</button>
+    </div>
+  </div>
+  <script>
+    function update() {
+      var a = parseInt(document.getElementById("side-a").value);
+      var b = parseInt(document.getElementById("side-b").value);
+      var c = Math.sqrt(a*a + b*b);
+      document.getElementById("a-display").textContent = a;
+      document.getElementById("b-display").textContent = b;
+      document.getElementById("formula").textContent = a + "2 + " + b + "2 = c2 -> " + (a*a) + " + " + (b*b) + " = " + (a*a+b*b);
+      document.getElementById("answer").textContent = "c = " + c.toFixed(2);
+      document.getElementById("verify").textContent = "Verified: " + (a*a) + " + " + (b*b) + " = " + (a*a+b*b) + " = " + (c*c).toFixed(0);
+      drawTriangle(a, b, c);
+    }
+    function drawTriangle(a, b, c) {
+      var scale = 10;
+      var ax = 30, ay = 250;
+      var bx = ax + a * scale, by = ay;
+      var cx = ax, cy = ay - b * scale;
+      var svg = document.getElementById("triangle-svg");
+      svg.innerHTML = '<polygon points="' + ax + ',' + ay + ' ' + bx + ',' + by + ' ' + cx + ',' + cy + '" fill="rgba(251,191,36,0.1)" stroke="#fbbf24" stroke-width="2"/>' +
+        '<text x="' + ((ax+bx)/2) + '" y="' + (ay+20) + '" fill="#f87171" text-anchor="middle" font-size="14" font-weight="bold">a = ' + a + '</text>' +
+        '<text x="' + (ax-20) + '" y="' + ((ay+cy)/2) + '" fill="#60a5fa" text-anchor="middle" font-size="14" font-weight="bold">b = ' + b + '</text>' +
+        '<text x="' + ((bx+cx)/2+15) + '" y="' + ((by+cy)/2) + '" fill="#34d399" text-anchor="middle" font-size="14" font-weight="bold">c = ' + c.toFixed(1) + '</text>' +
+        '<rect x="' + ax + '" y="' + (ay-12) + '" width="12" height="12" fill="none" stroke="#475569" stroke-width="1"/>';
+    }
+    function randomize() {
+      document.getElementById("side-a").value = Math.floor(Math.random()*18)+2;
+      document.getElementById("side-b").value = Math.floor(Math.random()*18)+2;
+      update();
+    }
+    update();
+  </script>
+</body>
+</html>

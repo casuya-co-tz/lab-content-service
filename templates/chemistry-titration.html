@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Titration Lab</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    h1 { font-size: 20px; margin-bottom: 16px; color: #38bdf8; }
+    .lab-container { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 900px; }
+    .burette { width: 60px; height: 300px; background: #1e293b; border: 2px solid #475569; border-radius: 4px 4px 0 0; position: relative; margin: 0 auto; }
+    .burette .liquid { position: absolute; bottom: 0; width: 100%; background: linear-gradient(#60a5fa, #3b82f6); transition: height 0.3s; }
+    .flask { width: 120px; height: 140px; background: rgba(30,41,59,0.8); border: 2px solid #475569; border-radius: 0 0 40px 40px; position: relative; margin: 0 auto; }
+    .flask .solution { position: absolute; bottom: 0; width: 100%; border-radius: 0 0 38px 38px; transition: background 0.5s, height 0.3s; }
+    .controls { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; min-width: 250px; }
+    .controls label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .controls input[type=range] { width: 100%; margin-bottom: 12px; }
+    .controls .value { font-size: 24px; font-weight: 700; color: #38bdf8; margin-bottom: 16px; }
+    .controls button { width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+    .controls button:hover { background: #2563eb; }
+    .info { font-size: 12px; color: #94a3b8; margin-top: 12px; text-align: center; }
+    .ph-display { font-size: 32px; font-weight: 700; text-align: center; margin: 12px 0; padding: 8px; background: #0f172a; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Acid-Base Titration</h1>
+  <div class="lab-container">
+    <div>
+      <div class="burette"><div class="liquid" id="burette-liquid" style="height:90%"></div></div>
+      <p class="info">Burette (NaOH)</p>
+    </div>
+    <div>
+      <div class="flask"><div class="solution" id="flask-solution" style="height:40%; background:#f87171"></div></div>
+      <p class="info">Erlenmeyer Flask (HCl + Indicator)</p>
+    </div>
+    <div class="controls">
+      <label>Volume Added (mL)</label>
+      <div class="value" id="volume-display">0.0 mL</div>
+      <input type="range" id="volume" min="0" max="50" step="0.1" value="0">
+      <div class="ph-display" id="ph-display" style="color:#f87171">pH: 1.00</div>
+      <label>Concentration NaOH (M)</label>
+      <input type="range" id="conc" min="0.01" max="0.5" step="0.01" value="0.1">
+      <div class="value" id="conc-display">0.10 M</div>
+      <button onclick="resetExperiment()">Reset</button>
+    </div>
+  </div>
+  <script>
+    var volumeSlider = document.getElementById("volume");
+    var concSlider = document.getElementById("conc");
+    var completed = false;
+    volumeSlider.addEventListener("input", updateExperiment);
+    concSlider.addEventListener("input", updateExperiment);
+    function updateExperiment() {
+      var V = parseFloat(volumeSlider.value);
+      var C = parseFloat(concSlider.value);
+      var V_acid = 25;
+      var C_acid = 0.1;
+      var n_acid = V_acid * C_acid / 1000;
+      var n_base = V * C / 1000;
+      var excess = n_base - n_acid;
+      var totalVol = (V_acid + V) / 1000;
+      var pH;
+      if (excess < -0.0001) {
+        pH = -Math.log10(Math.abs(excess) / totalVol * 1000);
+      } else if (excess > 0.0001) {
+        pH = 14 + Math.log10(excess / totalVol * 1000);
+      } else {
+        pH = 7;
+      }
+      pH = Math.max(0, Math.min(14, pH));
+      document.getElementById("volume-display").textContent = V.toFixed(1) + " mL";
+      document.getElementById("conc-display").textContent = C.toFixed(2) + " M";
+      document.getElementById("ph-display").textContent = "pH: " + pH.toFixed(2);
+      document.getElementById("burette-liquid").style.height = Math.max(5, 90 - V * 1.8) + "%";
+      var flaskH = Math.min(90, 40 + V * 0.8);
+      document.getElementById("flask-solution").style.height = flaskH + "%";
+      var color;
+      if (pH < 4) color = "#f87171";
+      else if (pH < 6) color = "#fbbf24";
+      else if (pH < 8) color = "#a3e635";
+      else color = "#34d399";
+      document.getElementById("flask-solution").style.background = color;
+      document.getElementById("ph-display").style.color = color;
+      if (pH >= 6.9 && pH <= 7.1 && !completed) {
+        completed = true;
+        window.parent.postMessage({ type: "lab-progress", status: "completed", score: 100, completion_data: { volume_at_endpoint: V, concentration: C } }, "*");
+      }
+    }
+    function resetExperiment() {
+      volumeSlider.value = 0;
+      completed = false;
+      updateExperiment();
+    }
+    updateExperiment();
+  </script>
+</body>
+</html>

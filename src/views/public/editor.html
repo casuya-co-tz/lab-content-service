@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab Content Service — Editor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #f9f3e9; --panel: #ffffff; --panel2: #f5f0e8;
+      --border: #e0d8cc; --text: #191919; --dim: #6b6b6b;
+      --accent: #34e8bb; --green: #22c55e; --red: #ef4444;
+      --amber: #f59e0b; --purple: #a95af8; --cyan: #06b6d4;
+    }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border); gap: 8px; position: relative; z-index: 50; }
+    .topbar-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .topbar-left h1 { font-size: clamp(12px, 3vw, 15px); font-weight: 600; letter-spacing: 0.3px; white-space: nowrap; color: var(--dim); }
+    .topbar-left h1 span { color: #0b100f; font-weight: 700; }
+    .topbar-right { display: flex; align-items: center; gap: 4px; }
+
+    .hamburger { display: none; flex-direction: column; gap: 4px; background: none; border: none; cursor: pointer; padding: 4px; }
+    .hamburger span { display: block; width: 18px; height: 2px; background: var(--dim); transition: 0.2s; }
+    .topbar-nav { display: flex; gap: 2px; align-items: center; }
+    .topbar-nav a { padding: 4px 8px; font-size: clamp(10px, 2vw, 12px); font-weight: 500; color: var(--dim); text-decoration: none; transition: 0.15s; white-space: nowrap; }
+    .topbar-nav a:hover { color: var(--text); background: var(--panel2); }
+    .topbar-nav a.active { color: #003326; background: rgba(52,232,187,0.12); }
+
+    @media (max-width: 640px) {
+      .hamburger { display: flex; }
+      .topbar-nav { display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column; background: var(--panel); border-bottom: 1px solid var(--border); padding: 8px; z-index: 100; gap: 2px; }
+      .topbar-nav.open { display: flex; }
+      .topbar-nav a { width: 100%; padding: 10px 12px; }
+    }
+
+    .btn { height: 30px; padding: 0 10px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); font-size: clamp(10px, 2vw, 12px); font-weight: 500; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; touch-action: manipulation; }
+    .btn:hover { background: var(--border); }
+    .btn:active { transform: scale(0.97); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #003326; font-weight: 600; }
+    .btn.primary:hover { background: #2dd4bf; }
+    .btn.green { background: var(--green); border-color: var(--green); color: #fff; }
+    .btn.green:hover { background: #16a34a; }
+    .btn.red { background: var(--red); border-color: var(--red); color: #fff; }
+    .btn.red:hover { background: #dc2626; }
+    .btn.purple { background: var(--purple); border-color: var(--purple); color: #fff; }
+    .btn.purple:hover { background: #9333ea; }
+    .btn:disabled { opacity: 0.35; pointer-events: none; }
+    .btn-label { display: inline; }
+    @media (max-width: 640px) { .btn-label { display: none; } }
+
+    .kbd { display: inline-block; padding: 1px 5px; font-size: 10px; font-family: monospace; background: var(--panel2); border: 1px solid var(--border); color: var(--dim); }
+    @media (max-width: 640px) { .kbd { display: none; } }
+
+    .sidebar-toggle { display: none; background: none; border: 1px solid var(--border); cursor: pointer; padding: 4px 8px; font-size: 16px; color: var(--dim); }
+    @media (max-width: 768px) { .sidebar-toggle { display: inline-flex; align-items: center; } }
+
+    /* ── "..." dropdown ── */
+    .more-btn { position: relative; }
+    .more-btn .more-dropdown { display: none; position: absolute; top: 100%; right: 0; background: var(--panel); border: 1px solid var(--border); z-index: 60; min-width: 140px; }
+    .more-btn .more-dropdown.open { display: block; }
+    .more-btn .more-dropdown button { display: block; width: 100%; padding: 8px 12px; border: none; background: none; color: var(--text); font-size: 12px; text-align: left; cursor: pointer; }
+    .more-btn .more-dropdown button:hover { background: var(--panel2); }
+    .more-btn .more-dropdown button + button { border-top: 1px solid var(--border); }
+    .more-btn .more-dropdown button:disabled { opacity: 0.35; }
+    .more-desktop { display: inline-flex; }
+    @media (max-width: 640px) { .more-desktop { display: none; } }
+
+    .layout { display: flex; height: calc(100vh - 42px); position: relative; }
+
+    .sidebar { width: 260px; min-width: 260px; background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; padding: 12px; display: flex; flex-direction: column; transition: transform 0.25s ease; z-index: 20; }
+    .sidebar h3 { font-size: clamp(10px, 2vw, 11px); text-transform: uppercase; letter-spacing: 1.5px; color: var(--dim); margin-bottom: 8px; font-weight: 700; }
+    .sidebar-search { width: 100%; height: 30px; padding: 0 8px; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: clamp(11px, 2.5vw, 13px); margin-bottom: 10px; outline: none; }
+    .sidebar-search:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(52,232,187,0.2); }
+    .lab-item { padding: 8px 10px; background: var(--panel2); border: 1px solid var(--border); margin-bottom: -1px; cursor: pointer; transition: 0.15s; }
+    .lab-item:hover { z-index: 1; position: relative; border-color: var(--accent); }
+    .lab-item.active { border-color: var(--accent); background: rgba(52,232,187,0.08); z-index: 1; position: relative; }
+    .lab-item .title { font-size: clamp(11px, 2.5vw, 13px); font-weight: 600; margin-bottom: 2px; word-break: break-word; }
+    .lab-item .meta { font-size: clamp(10px, 2vw, 11px); color: var(--dim); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .lab-item .meta .pub { color: var(--green); }
+    .lab-item .meta .draft { color: var(--amber); }
+
+    .sc { font-size: clamp(9px, 2vw, 10px); padding: 1px 5px; font-weight: 600; text-transform: uppercase; display: inline-block; }
+    .sc.chemistry { color: #f87171; background: rgba(248,113,113,0.1); }
+    .sc.physics { color: #60a5fa; background: rgba(96,165,250,0.1); }
+    .sc.biology { color: #34d399; background: rgba(52,211,153,0.1); }
+    .sc.mathematics { color: #fbbf24; background: rgba(251,191,36,0.1); }
+
+    .new-lab-form { padding: 12px; background: var(--panel2); border: 1px solid var(--border); margin-bottom: 12px; display: none; }
+    .new-lab-form.show { display: block; }
+    .new-lab-form label { display: block; font-size: clamp(10px, 2vw, 11px); text-transform: uppercase; letter-spacing: 1px; color: var(--dim); margin-bottom: 4px; font-weight: 700; }
+    .new-lab-form input, .new-lab-form select { width: 100%; height: 28px; padding: 0 8px; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: 12px; margin-bottom: 8px; outline: none; }
+    .new-lab-form input:focus, .new-lab-form select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(52,232,187,0.2); }
+    .template-select { margin-top: 8px; }
+    .template-select .template-option { padding: 8px; background: var(--bg); border: 1px solid var(--border); margin-bottom: -1px; cursor: pointer; font-size: clamp(11px, 2.5vw, 12px); }
+    .template-select .template-option:hover { z-index: 1; position: relative; border-color: var(--accent); }
+    .template-select .template-option.selected { border-color: var(--accent); background: rgba(52,232,187,0.08); z-index: 1; position: relative; }
+
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 15; }
+    @media (max-width: 768px) {
+      .sidebar { position: fixed; top: 42px; left: 0; bottom: 0; transform: translateX(-100%); z-index: 20; }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.open { display: block; }
+    }
+
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .main-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--dim); font-size: clamp(12px, 3vw, 14px); gap: 12px; padding: 20px; text-align: center; }
+
+    .editor-header { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .editor-header label { font-size: clamp(9px, 2vw, 11px); text-transform: uppercase; letter-spacing: 1px; color: var(--dim); font-weight: 700; }
+    .editor-header input, .editor-header select { height: 28px; padding: 0 8px; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: clamp(11px, 2.5vw, 13px); outline: none; }
+    .editor-header input:focus, .editor-header select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(52,232,187,0.2); }
+    .editor-header input[type="text"] { width: clamp(100px, 20vw, 180px); }
+    .editor-header select { width: clamp(90px, 15vw, 120px); }
+    .editor-header .spacer { flex: 1; min-width: 8px; }
+    .editor-header .premium-check { display: flex; align-items: center; gap: 4px; }
+    .editor-header .premium-check input { width: auto; margin: 0; }
+
+    @media (max-width: 600px) {
+      .editor-header { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px; }
+      .editor-header input[type="text"] { width: 100%; }
+      .editor-header select { width: 100%; }
+      .editor-header .spacer { display: none; }
+    }
+
+    .editor-toolbar { display: flex; align-items: center; gap: 3px; padding: 4px 10px; background: var(--panel2); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .toolbar-btn { height: 26px; padding: 0 7px; border: 1px solid transparent; background: transparent; color: var(--dim); font-size: clamp(10px, 2vw, 12px); font-weight: 500; cursor: pointer; white-space: nowrap; }
+    .toolbar-btn:hover { background: var(--panel); color: var(--text); border-color: var(--border); }
+    .toolbar-sep { width: 1px; height: 16px; background: var(--border); margin: 0 3px; flex-shrink: 0; }
+    .search-replace { display: none; align-items: center; gap: 3px; margin-left: auto; flex-wrap: wrap; }
+    .search-replace.show { display: flex; }
+    .search-replace input { height: 24px; padding: 0 6px; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: clamp(10px, 2vw, 12px); outline: none; width: clamp(60px, 12vw, 120px); }
+    .search-replace input:focus { border-color: var(--accent); }
+    .search-replace .match-count { font-size: 10px; color: var(--dim); min-width: 36px; text-align: center; }
+
+    .editor-body { flex: 1; display: flex; overflow: hidden; }
+    @media (max-width: 640px) { .editor-body { flex-direction: column; } }
+
+    .panel-tabs { display: none; }
+    @media (max-width: 640px) {
+      .panel-tabs { display: flex; background: var(--panel); border-bottom: 1px solid var(--border); }
+      .panel-tabs button { flex: 1; padding: 8px; background: transparent; border: none; color: var(--dim); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; border-bottom: 2px solid transparent; transition: 0.15s; }
+      .panel-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+    }
+
+    .code-panel { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border); min-width: 0; }
+    .preview-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    @media (max-width: 640px) {
+      .code-panel { border-right: none; }
+      .code-panel.hidden-mobile { display: none; }
+      .preview-panel.hidden-mobile { display: none; }
+    }
+
+    .code-wrap { flex: 1; display: flex; overflow: hidden; position: relative; }
+    .line-numbers { width: clamp(36px, 8vw, 48px); padding: 12px 6px 12px 0; background: #f5efe5; color: #b0a898; font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace; font-size: clamp(11px, 2.5vw, 14px); line-height: 1.5; text-align: right; overflow: hidden; user-select: none; flex-shrink: 0; }
+    .code-panel textarea { flex: 1; width: 100%; padding: 12px; background: #f5efe5; color: #2d2d2d; border: none; font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace; font-size: clamp(11px, 2.5vw, 14px); line-height: 1.5; resize: none; outline: none; tab-size: 2; min-width: 0; }
+
+    .preview-panel iframe { flex: 1; border: none; background: #f5efe5; }
+    @media (max-width: 640px) { .preview-panel iframe { min-height: 300px; } }
+
+    .panel-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: var(--panel); border-bottom: 1px solid var(--border); gap: 6px; flex-wrap: wrap; }
+    .panel-header span { font-size: clamp(10px, 2vw, 11px); text-transform: uppercase; letter-spacing: 1px; color: var(--dim); font-weight: 700; }
+
+    .status-bar { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px; background: var(--panel); border-top: 1px solid var(--border); font-size: clamp(10px, 2vw, 11px); color: var(--dim); gap: 8px; flex-wrap: wrap; }
+    .status-bar .left { display: flex; gap: 10px; align-items: center; }
+    .status-bar .right { display: flex; gap: 10px; align-items: center; }
+    .status-indicator { width: 6px; height: 6px; flex-shrink: 0; }
+    .status-indicator.saved { background: var(--green); }
+    .status-indicator.modified { background: var(--amber); }
+
+    .version-list { max-height: 200px; overflow-y: auto; }
+    .version-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: clamp(11px, 2.5vw, 12px); cursor: pointer; }
+    .version-item:hover { background: var(--panel2); }
+    .version-item .v-num { font-weight: 700; color: var(--accent); min-width: 24px; }
+    .version-item .v-desc { flex: 1; color: var(--dim); min-width: 0; word-break: break-word; }
+    .version-item .v-time { font-size: 10px; color: #b0a898; flex-shrink: 0; }
+
+    .toast { position: fixed; bottom: 50px; right: 20px; padding: 10px 16px; background: var(--panel); border: 1px solid var(--green); color: #003326; font-size: clamp(11px, 2.5vw, 13px); font-weight: 600; z-index: 1000; opacity: 0; transition: opacity 0.3s; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .toast.show { opacity: 1; }
+    .toast.error { border-color: var(--red); color: var(--red); }
+    @media (max-width: 480px) { .toast { right: 10px; left: 10px; bottom: 60px; text-align: center; } }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: var(--panel); border: 1px solid var(--border); padding: 20px; width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+    .modal h2 { font-size: clamp(14px, 3vw, 18px); margin-bottom: 16px; }
+    .modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="hamburger" id="hamburger" aria-label="Menu" onclick="toggleNav()">
+        <span></span><span></span><span></span>
+      </button>
+      <h1><span>Lab Content</span> Service</h1>
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar" onclick="toggleSidebar()">☰</button>
+    </div>
+    <div class="topbar-right">
+      <nav class="topbar-nav" id="topnav">
+        <a href="/">Dashboard</a>
+        <a href="/editor" class="active">Editor</a>
+      </nav>
+      <button class="btn" onclick="showNewForm()">+ New</button>
+      <button class="btn green" id="btn-save" onclick="saveLab()" disabled><span class="btn-label">Save</span> 💾</button>
+      <div class="more-btn" id="moreBtn">
+        <button class="btn" onclick="toggleMore()">···</button>
+        <div class="more-dropdown" id="moreDropdown">
+          <button id="dd-publish" onclick="togglePublish()" disabled>Publish</button>
+          <button id="dd-version" onclick="createVersion()" disabled>New Version</button>
+          <button id="dd-versions" onclick="showVersionHistory()" disabled>History</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar" id="sidebar">
+      <div class="new-lab-form" id="new-form">
+        <h3 style="margin-bottom:10px">New Lab</h3>
+        <label>Title</label>
+        <input type="text" id="nf-title" placeholder="Lab title">
+        <label>Subject</label>
+        <select id="nf-subject">
+          <option value="chemistry">Chemistry</option>
+          <option value="physics">Physics</option>
+          <option value="biology">Biology</option>
+          <option value="mathematics">Mathematics</option>
+        </select>
+        <label>Template (optional)</label>
+        <div id="template-options" class="template-select"></div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn primary" onclick="createLab()">Create</button>
+          <button class="btn" onclick="hideNewForm()">Cancel</button>
+        </div>
+      </div>
+      <h3>Labs</h3>
+      <input type="text" class="sidebar-search" placeholder="Filter labs..." oninput="filterLabs(this.value)">
+      <div id="lab-list"></div>
+    </div>
+
+    <div class="main" id="main-area">
+      <div class="main-empty" id="main-empty">
+        <div>Select a lab or create a new one</div>
+        <div>
+          <span class="kbd">Ctrl+N</span> New Lab &nbsp;
+          <span class="kbd">Ctrl+S</span> Save &nbsp;
+          <span class="kbd">Ctrl+F</span> Search
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="modal-overlay" id="version-modal">
+    <div class="modal">
+      <h2>Version History</h2>
+      <div class="version-list" id="version-list"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeVersionModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let authHeader = '';
+    let apiKey = '';
+    let labs = [];
+    let currentLab = null;
+    let currentHtml = '';
+    let isModified = false;
+    let templates = [];
+    let selectedTemplate = null;
+    let searchMatches = [];
+    let searchIndex = 0;
+    let activePanel = 'code';
+
+    function toggleNav() {
+      document.getElementById('topnav').classList.toggle('open');
+    }
+    document.addEventListener('click', (e) => {
+      const nav = document.getElementById('topnav');
+      if (!e.target.closest('.topbar')) nav.classList.remove('open');
+    });
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('open');
+    }
+
+    function toggleMore() {
+      document.getElementById('moreDropdown').classList.toggle('open');
+    }
+    document.addEventListener('click', (e) => {
+      const dd = document.getElementById('moreDropdown');
+      if (!e.target.closest('.more-btn')) dd.classList.remove('open');
+    });
+
+    function setActivePanel(panel) {
+      activePanel = panel;
+      document.querySelectorAll('.panel-tabs button').forEach(b => b.classList.toggle('active', b.dataset.panel === panel));
+      document.querySelector('.code-panel')?.classList.toggle('hidden-mobile', panel !== 'code');
+      document.querySelector('.preview-panel')?.classList.toggle('hidden-mobile', panel !== 'preview');
+    }
+
+    function init() {
+      const fromUrl = new URLSearchParams(window.location.search);
+      apiKey = fromUrl.get('api_key') || localStorage.getItem('api_key') || 'lab-content-secret-key-change-in-production';
+      if (fromUrl.get('api_key')) localStorage.setItem('api_key', apiKey);
+
+      const saved = fromUrl.get('password') || localStorage.getItem('admin_password');
+      if (saved) {
+        authHeader = 'Basic ' + btoa('admin:' + saved);
+        if (fromUrl.get('password')) localStorage.setItem('admin_password', fromUrl.get('password'));
+      } else {
+        localStorage.setItem('admin_password', 'admin123');
+        authHeader = 'Basic ' + btoa('admin:admin123');
+      }
+      loadLabs();
+      loadTemplates();
+    }
+
+    async function apiFetch(path, opts = {}) {
+      const headers = { 'Content-Type': 'application/json', 'x-api-key': apiKey };
+      if (authHeader) headers['Authorization'] = authHeader;
+      const res = await fetch(path, { ...opts, headers: { ...headers, ...opts.headers } });
+      return res;
+    }
+
+    function toast(msg, isError = false) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = 'toast show' + (isError ? ' error' : '');
+      setTimeout(() => el.className = 'toast', 2000);
+    }
+
+    async function loadLabs() {
+      try {
+        const res = await apiFetch('/api/labs');
+        if (!res.ok) throw new Error(res.status === 401 ? 'Auth failed' : 'Failed');
+        labs = await res.json();
+        renderLabList();
+      } catch (e) {
+        console.error('Load labs error:', e.message);
+      }
+    }
+
+    async function loadTemplates() {
+      try {
+        const res = await apiFetch('/api/templates');
+        if (!res.ok) return;
+        templates = await res.json();
+        renderTemplateOptions();
+      } catch (e) {}
+    }
+
+    function renderTemplateOptions() {
+      const el = document.getElementById('template-options');
+      el.innerHTML = templates.map(t => `
+        <div class="template-option" onclick="selectTemplate('${t.id}', this)" data-id="${t.id}">
+          <strong>${t.name}</strong> <span class="sc ${t.subject}">${t.subject}</span>
+          <div style="font-size:10px;color:var(--dim);margin-top:2px">${t.description || ''}</div>
+        </div>
+      `).join('') + '<div class="template-option" onclick="selectTemplate(null, this)" data-id="none"><em>No template (blank)</em></div>';
+    }
+
+    function selectTemplate(id, el) {
+      selectedTemplate = id;
+      document.querySelectorAll('.template-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    function renderLabList(filter = '') {
+      const el = document.getElementById('lab-list');
+      const filtered = filter
+        ? labs.filter(l => l.title.toLowerCase().includes(filter.toLowerCase()) || l.subject.includes(filter.toLowerCase()))
+        : labs;
+      el.innerHTML = filtered.map(l => `
+        <div class="lab-item ${currentLab?.id === l.id ? 'active' : ''}" onclick="selectLab('${l.id}')">
+          <div class="title">${l.title}</div>
+          <div class="meta">
+            <span class="sc ${l.subject}">${l.subject}</span>
+            ${l.is_published ? '<span class="pub">Published</span>' : '<span class="draft">Draft</span>'}
+            <span>v${l.current_version}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterLabs(v) { renderLabList(v); }
+
+    async function selectLab(id) {
+      if (window.innerWidth <= 768) toggleSidebar();
+      try {
+        const res = await apiFetch(`/api/labs/${id}`);
+        if (!res.ok) throw new Error('Failed');
+        currentLab = await res.json();
+
+        const htmlRes = await apiFetch(`/api/labs/${id}/html`);
+        if (htmlRes.ok) {
+          const data = await htmlRes.json();
+          currentHtml = data.html_code;
+        } else {
+          currentHtml = '';
+        }
+
+        isModified = false;
+        renderEditor();
+        renderLabList();
+        updateStatusBar();
+      } catch (e) {
+        console.error('Select lab error:', e);
+      }
+    }
+
+    function renderEditor() {
+      if (!currentLab) return;
+      document.getElementById('main-empty')?.remove();
+
+      const isMobile = window.innerWidth <= 640;
+      const area = document.getElementById('main-area');
+      area.innerHTML = `
+        <div class="editor-header">
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;width:100%">
+            <label>Title</label>
+            <input type="text" id="ed-title" value="${escapeAttr(currentLab.title || '')}" onchange="markModified()" style="flex:1;min-width:80px">
+            <label>Subject</label>
+            <select id="ed-subject" onchange="markModified()">
+              <option value="chemistry" ${currentLab.subject === 'chemistry' ? 'selected' : ''}>Chem</option>
+              <option value="physics" ${currentLab.subject === 'physics' ? 'selected' : ''}>Phys</option>
+              <option value="biology" ${currentLab.subject === 'biology' ? 'selected' : ''}>Bio</option>
+              <option value="mathematics" ${currentLab.subject === 'mathematics' ? 'selected' : ''}>Math</option>
+            </select>
+            <div class="premium-check">
+              <label>Premium</label>
+              <input type="checkbox" id="ed-premium" ${currentLab.is_premium ? 'checked' : ''} onchange="markModified()">
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;width:100%">
+            <label>Desc</label>
+            <input type="text" id="ed-desc" value="${escapeAttr(currentLab.description || '')}" placeholder="Optional" style="flex:1;min-width:60px" onchange="markModified()">
+          </div>
+        </div>
+        <div class="editor-toolbar">
+          <button class="toolbar-btn" onclick="insertSnippet('table')">Tbl</button>
+          <button class="toolbar-btn" onclick="insertSnippet('form')">Form</button>
+          <button class="toolbar-btn" onclick="insertSnippet('canvas')">Canvas</button>
+          <button class="toolbar-btn" onclick="insertSnippet('postMessage')">Msg</button>
+          <button class="toolbar-btn" onclick="insertSnippet('style')">Theme</button>
+          <button class="toolbar-btn" onclick="insertSnippet('responsive')">Resp</button>
+          <div class="toolbar-sep"></div>
+          <button class="toolbar-btn" onclick="undo()">↩</button>
+          <button class="toolbar-btn" onclick="redo()">↪</button>
+          <div class="search-replace" id="search-replace">
+            <input type="text" id="search-input" placeholder="Find..." oninput="doSearch()" onkeydown="handleSearchKey(event)">
+            <span class="match-count" id="match-count">0/0</span>
+            <button class="toolbar-btn" onclick="prevMatch()">‹</button>
+            <button class="toolbar-btn" onclick="nextMatch()">›</button>
+            <input type="text" id="replace-input" placeholder="Replace..." style="width:80px">
+            <button class="toolbar-btn" onclick="replaceOne()">R</button>
+            <button class="toolbar-btn" onclick="replaceAll()">All</button>
+            <button class="toolbar-btn" onclick="toggleSearchReplace()">✕</button>
+          </div>
+        </div>
+        ${isMobile ? `
+        <div class="panel-tabs">
+          <button data-panel="code" class="active" onclick="setActivePanel('code')">Code</button>
+          <button data-panel="preview" onclick="setActivePanel('preview')">Preview</button>
+        </div>
+        ` : ''}
+        <div class="editor-body">
+          <div class="code-panel">
+            <div class="panel-header">
+              <span>HTML Code</span>
+              <div style="display:flex;gap:4px">
+                <button class="btn" onclick="toggleSearchReplace()" title="Ctrl+F">Find</button>
+                <button class="btn" onclick="refreshPreview()">Preview</button>
+              </div>
+            </div>
+            <div class="code-wrap">
+              <div class="line-numbers" id="line-numbers">1</div>
+              <textarea id="ed-html" spellcheck="false" oninput="onCodeChange()" onscroll="syncLineNumbers()" onkeydown="handleTab(event)">${escapeHtml(currentHtml)}</textarea>
+            </div>
+          </div>
+          <div class="preview-panel">
+            <div class="panel-header">
+              <span>Live Preview</span>
+              <span id="preview-status">Ready</span>
+            </div>
+            <iframe id="preview-frame" sandbox="allow-scripts"></iframe>
+          </div>
+        </div>
+        <div class="status-bar">
+          <div class="left">
+            <span class="status-indicator" id="status-indicator"></span>
+            <span id="status-text">v${currentLab.current_version} &bull; ${currentLab.is_published ? 'Published' : 'Draft'}</span>
+          </div>
+          <div class="right">
+            <span id="cursor-pos">Ln 1</span>
+            <span id="byte-count">${currentHtml.length}B</span>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('btn-save').disabled = false;
+      document.getElementById('dd-publish').disabled = false;
+      document.getElementById('dd-version').disabled = false;
+      document.getElementById('dd-versions').disabled = false;
+
+      updateStatusBar();
+      updateLineNumbers();
+      refreshPreview();
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function escapeAttr(str) {
+      return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function markModified() {
+      isModified = true;
+      updateStatusBar();
+    }
+
+    function updateStatusBar() {
+      const ind = document.getElementById('status-indicator');
+      const txt = document.getElementById('status-text');
+      if (ind) ind.className = 'status-indicator ' + (isModified ? 'modified' : 'saved');
+      if (txt && currentLab) txt.textContent = `v${currentLab.current_version} • ${currentLab.is_published ? 'Pub' : 'Draft'}${isModified ? ' • Mod' : ''}`;
+    }
+
+    function onCodeChange() {
+      currentHtml = document.getElementById('ed-html').value;
+      markModified();
+      updateLineNumbers();
+      const bc = document.getElementById('byte-count');
+      if (bc) bc.textContent = currentHtml.length + 'B';
+    }
+
+    function updateLineNumbers() {
+      const textarea = document.getElementById('ed-html');
+      const lines = document.getElementById('line-numbers');
+      if (!textarea || !lines) return;
+      const count = textarea.value.split('\n').length;
+      lines.innerHTML = Array.from({ length: count }, (_, i) => i + 1).join('<br>');
+    }
+
+    function syncLineNumbers() {
+      const textarea = document.getElementById('ed-html');
+      const lines = document.getElementById('line-numbers');
+      if (textarea && lines) lines.scrollTop = textarea.scrollTop;
+    }
+
+    function updateCursorPos() {
+      const textarea = document.getElementById('ed-html');
+      const pos = document.getElementById('cursor-pos');
+      if (!textarea || !pos) return;
+      const text = textarea.value.substring(0, textarea.selectionStart);
+      const lines = text.split('\n');
+      pos.textContent = `Ln ${lines.length}`;
+    }
+
+    function handleTab(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const ta = e.target;
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        ta.value = ta.value.substring(0, start) + '  ' + ta.value.substring(end);
+        ta.selectionStart = ta.selectionEnd = start + 2;
+        onCodeChange();
+      }
+    }
+
+    function refreshPreview() {
+      const frame = document.getElementById('preview-frame');
+      if (!frame) return;
+      const html = document.getElementById('ed-html').value;
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      frame.src = url;
+      const ps = document.getElementById('preview-status');
+      if (ps) ps.textContent = 'Loading...';
+      frame.onload = () => { if (ps) ps.textContent = 'Ready'; };
+    }
+
+    const history = [];
+    let historyIndex = -1;
+
+    function pushHistory() {
+      history.splice(historyIndex + 1);
+      history.push(currentHtml);
+      historyIndex = history.length - 1;
+      if (history.length > 100) { history.shift(); historyIndex--; }
+    }
+
+    function undo() {
+      if (historyIndex > 0) {
+        historyIndex--;
+        currentHtml = history[historyIndex];
+        document.getElementById('ed-html').value = currentHtml;
+        onCodeChange();
+      }
+    }
+
+    function redo() {
+      if (historyIndex < history.length - 1) {
+        historyIndex++;
+        currentHtml = history[historyIndex];
+        document.getElementById('ed-html').value = currentHtml;
+        onCodeChange();
+      }
+    }
+
+    function toggleSearchReplace() {
+      document.getElementById('search-replace').classList.toggle('show');
+      if (document.getElementById('search-replace').classList.contains('show')) {
+        document.getElementById('search-input').focus();
+      }
+    }
+
+    function doSearch() {
+      const query = document.getElementById('search-input').value;
+      const textarea = document.getElementById('ed-html');
+      searchMatches = [];
+      searchIndex = 0;
+      if (!query) {
+        document.getElementById('match-count').textContent = '0/0';
+        return;
+      }
+      const text = textarea.value.toLowerCase();
+      let idx = 0;
+      while ((idx = text.indexOf(query.toLowerCase(), idx)) !== -1) {
+        searchMatches.push(idx);
+        idx++;
+      }
+      document.getElementById('match-count').textContent = searchMatches.length > 0 ? `1/${searchMatches.length}` : '0/0';
+      if (searchMatches.length > 0) highlightMatch(0);
+    }
+
+    function highlightMatch(i) {
+      const textarea = document.getElementById('ed-html');
+      const pos = searchMatches[i];
+      const len = document.getElementById('search-input').value.length;
+      textarea.setSelectionRange(pos, pos + len);
+      textarea.focus();
+      const text = textarea.value.substring(0, pos);
+      const line = text.split('\n').length;
+      const lineHeight = 19.5;
+      textarea.scrollTop = Math.max(0, (line - 5) * lineHeight);
+    }
+
+    function nextMatch() {
+      if (searchMatches.length === 0) return;
+      searchIndex = (searchIndex + 1) % searchMatches.length;
+      document.getElementById('match-count').textContent = `${searchIndex + 1}/${searchMatches.length}`;
+      highlightMatch(searchIndex);
+    }
+
+    function prevMatch() {
+      if (searchMatches.length === 0) return;
+      searchIndex = (searchIndex - 1 + searchMatches.length) % searchMatches.length;
+      document.getElementById('match-count').textContent = `${searchIndex + 1}/${searchMatches.length}`;
+      highlightMatch(searchIndex);
+    }
+
+    function replaceOne() {
+      if (searchMatches.length === 0) return;
+      const find = document.getElementById('search-input').value;
+      const replace = document.getElementById('replace-input').value;
+      const textarea = document.getElementById('ed-html');
+      const pos = searchMatches[searchIndex];
+      pushHistory();
+      textarea.value = textarea.value.substring(0, pos) + replace + textarea.value.substring(pos + find.length);
+      currentHtml = textarea.value;
+      onCodeChange();
+      doSearch();
+    }
+
+    function replaceAll() {
+      const find = document.getElementById('search-input').value;
+      const replace = document.getElementById('replace-input').value;
+      if (!find) return;
+      pushHistory();
+      const textarea = document.getElementById('ed-html');
+      textarea.value = textarea.value.split(find).join(replace);
+      currentHtml = textarea.value;
+      onCodeChange();
+      doSearch();
+      toast(`Replaced all occurrences`);
+    }
+
+    function handleSearchKey(e) {
+      if (e.key === 'Enter') { e.shiftKey ? prevMatch() : nextMatch(); }
+      if (e.key === 'Escape') toggleSearchReplace();
+    }
+
+    const snippets = {
+      table: `<table style="width:100%;border-collapse:collapse;margin:16px 0">\n  <thead>\n    <tr>\n      <th style="border:1px solid #e0d8cc;padding:8px;text-align:left;background:#f5f0e8;color:#191919">Column 1</th>\n      <th style="border:1px solid #e0d8cc;padding:8px;text-align:left;background:#f5f0e8;color:#191919">Column 2</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td style="border:1px solid #e0d8cc;padding:8px;color:#6b6b6b">Data</td>\n      <td style="border:1px solid #e0d8cc;padding:8px;color:#6b6b6b">Data</td>\n    </tr>\n  </tbody>\n</table>`,
+      form: `<div style="background:#ffffff;padding:20px;max-width:400px;border:1px solid #e0d8cc">\n  <h3 style="margin-bottom:16px;color:#191919">Input Form</h3>\n  <label style="display:block;font-size:12px;color:#6b6b6b;margin-bottom:4px">Label</label>\n  <input type="text" style="width:100%;padding:8px;background:#f9f3e9;border:1px solid #e0d8cc;color:#191919;margin-bottom:12px">\n  <button style="padding:8px 20px;background:#34e8bb;color:#003326;border:none;cursor:pointer;font-weight:600">Submit</button>\n</div>`,
+      canvas: `<canvas id="myCanvas" width="500" height="300" style="background:#ffffff;width:100%;border:1px solid #e0d8cc"></canvas>\n<script>\n  const canvas = document.getElementById('myCanvas');\n  const ctx = canvas.getContext('2d');\n  ctx.fillStyle = '#34e8bb';\n  ctx.fillRect(50, 50, 100, 100);\n<\/script>`,
+      postMessage: `<script>\n  window.parent.postMessage({\n    type: 'lab-progress',\n    status: 'completed',\n    score: 100,\n    completion_data: {}\n  }, '*');\n<\/script>`,
+      style: `<style>\n  * { margin: 0; padding: 0; box-sizing: border-box; }\n  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f9f3e9; color: #191919; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }\n  h1 { font-size: 20px; margin-bottom: 16px; color: #003326; }\n</style>`,
+      responsive: `<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<style>\n  .container { max-width: 800px; margin: 0 auto; padding: 20px; }\n  @media (max-width: 600px) {\n    .container { padding: 10px; }\n  }\n</style>`
+    };
+
+    function insertSnippet(name) {
+      const textarea = document.getElementById('ed-html');
+      const start = textarea.selectionStart;
+      pushHistory();
+      textarea.value = textarea.value.substring(0, start) + snippets[name] + textarea.value.substring(textarea.selectionEnd);
+      textarea.selectionStart = textarea.selectionEnd = start + snippets[name].length;
+      currentHtml = textarea.value;
+      onCodeChange();
+      textarea.focus();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 's') {
+          e.preventDefault();
+          if (e.shiftKey) createVersion();
+          else saveLab();
+        }
+        if (e.key === 'n') { e.preventDefault(); showNewForm(); }
+        if (e.key === 'f') { e.preventDefault(); toggleSearchReplace(); }
+        if (e.key === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+      }
+    });
+
+    async function saveLab() {
+      if (!currentLab) return;
+      pushHistory();
+      try {
+        const res = await apiFetch(`/api/labs/${currentLab.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            title: document.getElementById('ed-title').value,
+            subject: document.getElementById('ed-subject').value,
+            is_premium: document.getElementById('ed-premium').checked,
+            description: document.getElementById('ed-desc').value,
+          }),
+        });
+        if (!res.ok) throw new Error('Failed');
+        currentLab = await res.json();
+        isModified = false;
+        renderLabList();
+        updateStatusBar();
+        toast('Saved!');
+      } catch (e) {
+        toast('Save failed: ' + e.message, true);
+      }
+    }
+
+    async function togglePublish() {
+      if (!currentLab) return;
+      try {
+        const res = await apiFetch(`/api/labs/${currentLab.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ is_published: !currentLab.is_published }),
+        });
+        if (!res.ok) throw new Error('Failed');
+        currentLab = await res.json();
+        isModified = false;
+        renderLabList();
+        updateStatusBar();
+        toast(currentLab.is_published ? 'Published!' : 'Unpublished');
+      } catch (e) {
+        toast('Publish failed: ' + e.message, true);
+      }
+    }
+
+    async function createVersion() {
+      if (!currentLab) return;
+      const changelog = prompt('Version changelog:', `Update v${currentLab.current_version + 1}`);
+      if (changelog === null) return;
+      try {
+        const html = document.getElementById('ed-html').value;
+        const res = await apiFetch(`/api/labs/${currentLab.id}/versions`, {
+          method: 'POST',
+          body: JSON.stringify({ html_code: html, changelog }),
+        });
+        if (!res.ok) throw new Error('Failed');
+        currentLab.current_version++;
+        isModified = false;
+        pushHistory();
+        updateStatusBar();
+        renderLabList();
+        toast(`Saved as v${currentLab.current_version}`);
+      } catch (e) {
+        toast('Version create failed: ' + e.message, true);
+      }
+    }
+
+    async function showVersionHistory() {
+      if (!currentLab) return;
+      try {
+        const res = await apiFetch(`/api/labs/${currentLab.id}/versions`);
+        if (!res.ok) throw new Error('Failed');
+        const versions = await res.json();
+        document.getElementById('version-list').innerHTML = versions.map(v => `
+          <div class="version-item" onclick="loadVersion(${v.version_number})">
+            <div class="v-num">v${v.version_number}</div>
+            <div class="v-desc">${v.changelog || 'No description'}</div>
+            <div class="v-time">${new Date(v.created_at).toLocaleDateString()}</div>
+          </div>
+        `).join('') || '<div class="empty">No versions</div>';
+        document.getElementById('version-modal').classList.add('show');
+      } catch (e) {
+        toast('Failed to load versions', true);
+      }
+    }
+
+    async function loadVersion(num) {
+      try {
+        const res = await apiFetch(`/api/labs/${currentLab.id}/html?version=${num}`);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        currentHtml = data.html_code;
+        document.getElementById('ed-html').value = currentHtml;
+        onCodeChange();
+        closeVersionModal();
+        toast(`Loaded v${num}`);
+      } catch (e) {
+        toast('Failed to load version', true);
+      }
+    }
+
+    function closeVersionModal() {
+      document.getElementById('version-modal').classList.remove('show');
+    }
+
+    function showNewForm() { document.getElementById('new-form').classList.add('show'); }
+    function hideNewForm() { document.getElementById('new-form').classList.remove('show'); }
+
+    async function createLab() {
+      const title = document.getElementById('nf-title').value.trim();
+      const subject = document.getElementById('nf-subject').value;
+      if (!title) return alert('Title is required');
+
+      try {
+        let html_code;
+        if (selectedTemplate) {
+          const tmpl = templates.find(t => t.id === selectedTemplate);
+          html_code = tmpl ? tmpl.html_template : '';
+        }
+        if (!html_code) {
+          html_code = '<!DOCTYPE html>\n<html>\n<head><title>' + title + '</title></head>\n<body>\n<h1>' + title + '</h1>\n<p>Start building your lab here.</p>\n</body>\n</html>';
+        }
+
+        const res = await apiFetch('/api/labs', {
+          method: 'POST',
+          body: JSON.stringify({ title, subject, html_code }),
+        });
+        if (!res.ok) throw new Error('Failed');
+        hideNewForm();
+        document.getElementById('nf-title').value = '';
+        selectedTemplate = null;
+        await loadLabs();
+        const newLab = await res.json();
+        selectLab(newLab.id);
+        toast('Lab created!');
+      } catch (e) {
+        toast('Create failed: ' + e.message, true);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
