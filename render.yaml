@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: lab-content-service
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3100
+      - key: HOST
+        value: 0.0.0.0
+      - key: PGHOST
+        fromDatabase:
+          name: lab-content-db
+          property: host
+      - key: PGPORT
+        fromDatabase:
+          name: lab-content-db
+          property: port
+      - key: PGUSER
+        fromDatabase:
+          name: lab-content-db
+          property: user
+      - key: PGPASSWORD
+        fromDatabase:
+          name: lab-content-db
+          property: password
+      - key: PGDATABASE
+        fromDatabase:
+          name: lab-content-db
+          property: database
+      - key: CASUYA_ORIGIN
+        value: https://casuya-virtual-lab-platform.vercel.app
+      - key: API_KEY
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: PGSSLMODE
+        value: require
+
+databases:
+  - name: lab-content-db
+    plan: free
+    databaseName: lab_content
+    user: lab_content_user
